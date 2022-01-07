@@ -81,18 +81,18 @@ void initGpio(void)
   CMU_ClockEnable(cmuClock_GPIO, true);
 
   // Set Push Button 0 to input
-  GPIO_PinModeSet(BSP_GPIO_PB0_PORT, BSP_GPIO_PB0_PIN, gpioModeInput, 0);
+  GPIO_PinModeSet(gpioPortF, 6, gpioModeInput, 0);
 
   // Configure Push Button 0 to create PRS interrupt signals only
-  GPIO_IntConfig(BSP_GPIO_PB0_PORT, BSP_GPIO_PB0_PIN, false, false, false);
+  GPIO_IntConfig(gpioPortF, 6, false, false, false);
 
   // Use GPIO PB0 as async PRS to trigger ADC in EM2
   CMU_ClockEnable(cmuClock_PRS, true);
 
-  if (BSP_GPIO_PB0_PIN > 7){
-    PRS_SourceAsyncSignalSet(PRS_CHANNEL, PRS_CH_CTRL_SOURCESEL_GPIOH, (uint32_t)(BSP_GPIO_PB0_PIN - 8));
+  if (6 > 7){
+    PRS_SourceAsyncSignalSet(PRS_CHANNEL, PRS_CH_CTRL_SOURCESEL_GPIOH, (uint32_t)(1 - 8));
    } else {
-    PRS_SourceAsyncSignalSet(PRS_CHANNEL, PRS_CH_CTRL_SOURCESEL_GPIOL, BSP_GPIO_PB0_PIN);
+    PRS_SourceAsyncSignalSet(PRS_CHANNEL, PRS_CH_CTRL_SOURCESEL_GPIOL, 6);
   }
 }
 

@@ -39,6 +39,10 @@
 #include "em_cmu.h"
 #include "em_adc.h"
 
+#include "em_gpio.h"
+#include "em_usart.h"
+
+
 #define adcFreq   16000000
 
 volatile uint32_t sample;
@@ -72,6 +76,16 @@ void initADC (void)
   ADC_InitSingle(ADC0, &initSingle);
 }
 
+void initUSART (void)
+{
+  USART_InitAsync_TypeDef init = USART_INITASYNC_DEFAULT;
+  CMU_ClockEnable(cmuClock_USART0, true);
+  GPIO_PinModeSet(gpioPortC, 0, gpioModePushPull, 1);
+  USART_InitAsync(USART0, &init);
+  USART0->ROUTELOC0 = USART_ROUTELOC0_RXLOC_LOC5 | USART_ROUTELOC0_TXLOC_LOC5;
+  USART0->ROUTEPEN |= USART_ROUTEPEN_TXPEN | USART_ROUTEPEN_RXPEN;
+}
+
 /**************************************************************************//**
  * @brief  Main function
  *****************************************************************************/
@@ -80,6 +94,7 @@ int main(void)
   CHIP_Init();
 
   initADC();
+  initUSART();
 
   // Infinite loop
   while(1)
@@ -92,7 +107,8 @@ int main(void)
 
     // Get ADC result
     sample = ADC_DataSingleGet(ADC0);
-
+    USART_Tx(USART0, sample);
+    USART_Tx(USART0, '\n');
     // Calculate input voltage in mV
     millivolts = (sample * 2500) / 4096;
   }

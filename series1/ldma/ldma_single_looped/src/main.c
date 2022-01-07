@@ -34,11 +34,16 @@
  ******************************************************************************/
 
 #include <stdio.h>
-#include "em_chip.h"
 #include "em_device.h"
+#include "em_chip.h"
 #include "em_cmu.h"
 #include "em_emu.h"
+#include "em_adc.h"
+#include "em_prs.h"
+#include "em_gpio.h"
 #include "em_ldma.h"
+#include "bsp.h"
+
 
 // DMA channel used for the examples
 #define LDMA_CHANNEL      0
@@ -61,6 +66,7 @@ LDMA_Descriptor_t descLink;
 // Buffer for memory to memory transfer
 uint32_t srcBuffer[BUFFER_SIZE];
 uint32_t dstBuffer[NUM_ITERATIONS][BUFFER_SIZE];
+uint32_t adcBuffer[BUFFER_SIZE];
 
 /***************************************************************************//**
  * @brief
@@ -92,24 +98,15 @@ void LDMA_IRQHandler( void )
  ******************************************************************************/
 void initLdma(void)
 {
-  uint32_t i, j;
-
-  // Initialize buffers for memory transfer
-  for (i = 0; i < BUFFER_SIZE; i++){
-    srcBuffer[i] = i;
-    for (j = 0; j < NUM_ITERATIONS; j++){
-      dstBuffer[j][i] = 0;
-    }
-  }
-
   LDMA_Init_t init = LDMA_INIT_DEFAULT;
   LDMA_Init( &init );
 
   // Use looped peripheral transfer configuration macro
-  LDMA_TransferCfg_t periTransferTx = LDMA_TRANSFER_CFG_MEMORY_LOOP(LOOP_COUNT);
+  //DMA_TransferCfg_t periTransferTx = LDMA_TRANSFER_CFG_MEMORY_LOOP(LOOP_COUNT);
+  LDMA_TransferCfg_t periTransferTx = (LDMA_TransferCfg_t)LDMA_TRANSFER_CFG_PERIPHERAL_LOOP(ldmaPeripheralSignal_ADC0_SINGLE,LOOP_COUNT);
 
   // Use LINK descriptor macro for initialization and looping
-  descLink = (LDMA_Descriptor_t)LDMA_DESCRIPTOR_LINKREL_M2M_WORD(&srcBuffer, 0, BUFFER_SIZE, 0);
+  descLink = (LDMA_Descriptor_t)LDMA_DESCRIPTOR_LINKREL_M2M_WORD(&(ADC0->SINGLEDATA), 0, BUFFER_SIZE, 0);
 
   descLink.xfer.blockSize   = ldmaCtrlBlockSizeUnit4;   // Set block sizes to 4
   descLink.xfer.reqMode     = ldmaCtrlReqModeBlock;     // Set request mode to Block instead of all
@@ -123,10 +120,83 @@ void initLdma(void)
   LDMA_StartTransfer(LDMA_CHANNEL, (void*)&periTransferTx, (void*)&descLink);
 
   // Start transfers at dstBuffer
-  LDMA->CH[LDMA_CHANNEL].DST = (uint32_t)&dstBuffer;
+  LDMA->CH[LDMA_CHANNEL].DST = (uint32_t)&adcBuffer;
 
   // Send software request
   LDMA->SWREQ |= LDMA_CH_MASK;
+}
+
+
+void initAdc(void)
+{
+/*
+  CMU_ClockEnable(cmuClock_ADC0, true);
+
+   // Declare init structs
+   ADC_Init_TypeDef init = ADC_INIT_DEFAULT;
+   ADC_InitSingle_TypeDef initSingle = ADC_INITSINGLE_DEFAULT;
+
+   // Modify init structs and initialize
+   init.prescale = ADC_PrescaleCalc(16000000, 0); // Init to max ADC clock for Series 1
+
+   initSingle.diff       = false;        // single ended
+   initSingle.reference  = adcRef2V5;    // internal 2.5V reference
+   initSingle.resolution = adcRes12Bit;  // 12-bit resolution
+   initSingle.acqTime    = adcAcqTime4;  // set acquisition time to meet minimum requirement
+
+   // Select ADC input. See README for corresponding EXP header pin.
+   initSingle.posSel = adcPosSelAPORT4XCH11;
+   init.timebase = ADC_TimebaseCalc(0);
+
+   initSingle.singleDmaEm2Wu = 1;
+   initSingle.prsEnable = true;
+   initSingle.prsSel = (ADC_PRSSEL_TypeDef) PRS_CHANNEL;
+
+   ADC_Init(ADC0, &init);
+   ADC_InitSingle(ADC0, &initSingle);
+*/
+
+  // Declare init structs
+  ADC_Init_TypeDef init = ADC_INIT_DEFAULT;
+  ADC_InitSingle_TypeDef initSingle = ADC_INITSINGLE_DEFAULT;
+
+  // Enable ADC clock
+  CMU_ClockEnable(cmuClock_HFPER, true);
+  CMU_ClockEnable(cmuClock_ADC0, true);
+
+  // Select AUXHFRCO for ADC ASYNC mode so it can run in EM2
+  CMU->ADCCTRL = CMU_ADCCTRL_ADC0CLKSEL_AUXHFRCO;
+
+  // Set AUXHFRCO frequency and use it to setup the ADC
+  CMU_AUXHFRCOFreqSet(cmuAUXHFRCOFreq_1M0Hz);
+  init.timebase = ADC_TimebaseCalc(CMU_AUXHFRCOBandGet());
+  init.prescale = ADC_PrescaleCalc(1000000, CMU_AUXHFRCOBandGet());
+
+  // Let the ADC enable its clock in EM2 when necessary
+  init.em2ClockConfig = adcEm2ClockOnDemand;
+  // DMA is available in EM2 for processing SINGLEFIFO DVL request
+  initSingle.singleDmaEm2Wu = 1;
+
+  // Add external ADC input. See README for corresponding EXP header pin.
+  initSingle.posSel = adcPosSelAPORT4XCH11;
+
+  // Basic ADC single configuration
+  initSingle.diff = false;              // single-ended
+  initSingle.reference  = adcRef2V5;    // 2.5V reference
+  initSingle.resolution = adcRes12Bit;  // 12-bit resolution
+  initSingle.acqTime    = adcAcqTime4;  // set acquisition time to meet minimum requirements
+
+  // Enable PRS trigger and select channel 0
+  initSingle.prsEnable = true;
+  initSingle.prsSel = (ADC_PRSSEL_TypeDef) 0;
+
+  // Initialize ADC
+  ADC_Init(ADC0, &init);
+  ADC_InitSingle(ADC0, &initSingle);
+
+  // Clear the Single FIFO
+  ADC0->SINGLEFIFOCLEAR = ADC_SINGLEFIFOCLEAR_SINGLEFIFOCLEAR;
+
 }
 
 /**************************************************************************//**
@@ -140,6 +210,7 @@ int main(void)
   // Init DCDC regulator if available
   EMU_DCDCInit_TypeDef dcdcInit = EMU_DCDCINIT_DEFAULT;
   EMU_DCDCInit(&dcdcInit);
+  initAdc();
 
   // Initialize LDMA
   initLdma();

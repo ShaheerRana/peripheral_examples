@@ -60,22 +60,23 @@ uint32_t adcBuffer[ADC_BUFFER_SIZE];
 
 LDMA_TransferCfg_t trans;
 LDMA_Descriptor_t descr;
-
+volatile uint32_t counter = 0;
 /**************************************************************************//**
  * @brief LDMA Handler
  *****************************************************************************/
 void LDMA_IRQHandler(void)
 {
   // Clear interrupt flag
-  LDMA_IntClear(1 << LDMA_CHANNEL << _LDMA_IFC_DONE_SHIFT);
-
+  LDMA_IntClear( (1) << LDMA_CHANNEL << _LDMA_IFC_DONE_SHIFT);
+  counter++;
+  //ldmaLoopCnt = 5;
   // Insert transfer complete functionality here
 }
 
 /**************************************************************************//**
  * @brief GPIO initialization
  *****************************************************************************/
-void initGpio(void)
+/*void initGpio(void)
 {
   // Enable clock for GPIO
   CMU_ClockEnable(cmuClock_GPIO, true);
@@ -84,7 +85,7 @@ void initGpio(void)
   GPIO_PinModeSet(BSP_GPIO_PB0_PORT, BSP_GPIO_PB0_PIN, gpioModeInput, 0);
 
   // Configure Push Button 0 to create PRS interrupt signals only
-  GPIO_IntConfig(BSP_GPIO_PB0_PORT, BSP_GPIO_PB0_PIN, false, false, false);
+  GPIO_IntConfig(BSP_GPIO_PB0_PORT, BSP_GPIO_PB0_PIN, false, false, true);
 
   // Use GPIO PB0 as async PRS to trigger ADC in EM2
   CMU_ClockEnable(cmuClock_PRS, true);
@@ -94,38 +95,72 @@ void initGpio(void)
    } else {
     PRS_SourceAsyncSignalSet(PRS_CHANNEL, PRS_CH_CTRL_SOURCESEL_GPIOL, BSP_GPIO_PB0_PIN);
   }
-}
+}*/
 
 /**************************************************************************//**
  * @brief LDMA initialization
  *****************************************************************************/
 void initLdma(void)
 {
+//  LDMA_Init_t init = LDMA_INIT_DEFAULT;
+//  LDMA_Init( &init );
+//
+//  /* Writes directly to the LDMA channel registers */
+//  LDMA->CH[LDMA_CHANNEL].CTRL =
+//      LDMA_CH_CTRL_SIZE_HALFWORD
+//      + LDMA_CH_CTRL_REQMODE_ALL
+//      + LDMA_CH_CTRL_BLOCKSIZE_UNIT4
+//      + (ADC_BUFFER_SIZE -1 << _LDMA_CH_CTRL_XFERCNT_SHIFT);
+//  LDMA->CH[LDMA_CHANNEL].SRC = (uint32_t)&(ADC0->SINGLEDATA);
+//  LDMA->CH[LDMA_CHANNEL].DST = (uint32_t)&adcBuffer;
+//
+//  /* Enable interrupt and use software to start transfer */
+//  LDMA->CH[LDMA_CHANNEL].REQSEL = ldmaPeripheralSignal_NONE;
+//  LDMA->IFC = 1 << 0;
+//  LDMA->IEN = 1 << 0;
+//
+//  /* Enable LDMA Channel */
+//  LDMA->CHEN = 1 << 0;
+//
+//  /* Request transfer */
+//  LDMA->SWREQ |= 1 << 0;
+
   // Enable LDMA clock
   CMU_ClockEnable(cmuClock_LDMA, true);
 
   // Basic LDMA configuration
   LDMA_Init_t ldmaInit = LDMA_INIT_DEFAULT;
 
+  ldmaInit.ldmaInitCtrlNumFixed = 1;
+  //ldmaInit.ldmaInitCtrlSyncPrsClrEn = 1;
   LDMA_Init(&ldmaInit);
 
   // Transfers trigger off ADC single conversion complete
-  trans = (LDMA_TransferCfg_t)LDMA_TRANSFER_CFG_PERIPHERAL(ldmaPeripheralSignal_ADC0_SINGLE);
+  trans = (LDMA_TransferCfg_t)LDMA_TRANSFER_CFG_PERIPHERAL_LOOP(ldmaPeripheralSignal_ADC0_SINGLE,5);
 
   descr = (LDMA_Descriptor_t)LDMA_DESCRIPTOR_LINKREL_P2M_WORD(
       &(ADC0->SINGLEDATA),  // source
       adcBuffer,            // destination
       ADC_BUFFER_SIZE,      // data transfer size
       0);                   // link relative offset (links to self)
-
+  descr.xfer.linkMode = 0;
+  descr.xfer.linkAddr = 0;
+  descr.xfer.decLoopCnt = true;
+  descr.xfer.dstAddrMode = ldmaCtrlSrcAddrModeRel;   // Each consecutive transfer uses the previous destination
+  descr.xfer.doneIfs = 1;
+  descr.xfer.structReq = 1;
+  //counter = trans.ldmaLoopCnt;
   descr.xfer.ignoreSrec = true;       // ignore single requests to reduce time spent out of EM2
 
   // Initialize LDMA transfer
   LDMA_StartTransfer(LDMA_CHANNEL, &trans, &descr);
 
   // Clear pending and enable interrupts for channel
-  NVIC_ClearPendingIRQ(LDMA_IRQn);
-  NVIC_EnableIRQ(LDMA_IRQn);
+  //NVIC_ClearPendingIRQ(LDMA_IRQn);
+  //NVIC_EnableIRQ(LDMA_IRQn);
+
+  //new addition - Shaheer
+  //NVIC_SetPriority (LDMA_IRQn, 0);
 }
 
 /**************************************************************************//**
@@ -133,6 +168,33 @@ void initLdma(void)
  *****************************************************************************/
 void initAdc(void)
 {
+/*
+  CMU_ClockEnable(cmuClock_ADC0, true);
+
+   // Declare init structs
+   ADC_Init_TypeDef init = ADC_INIT_DEFAULT;
+   ADC_InitSingle_TypeDef initSingle = ADC_INITSINGLE_DEFAULT;
+
+   // Modify init structs and initialize
+   init.prescale = ADC_PrescaleCalc(16000000, 0); // Init to max ADC clock for Series 1
+
+   initSingle.diff       = false;        // single ended
+   initSingle.reference  = adcRef2V5;    // internal 2.5V reference
+   initSingle.resolution = adcRes12Bit;  // 12-bit resolution
+   initSingle.acqTime    = adcAcqTime4;  // set acquisition time to meet minimum requirement
+
+   // Select ADC input. See README for corresponding EXP header pin.
+   initSingle.posSel = adcPosSelAPORT4XCH11;
+   init.timebase = ADC_TimebaseCalc(0);
+
+   initSingle.singleDmaEm2Wu = 1;
+   initSingle.prsEnable = true;
+   initSingle.prsSel = (ADC_PRSSEL_TypeDef) PRS_CHANNEL;
+
+   ADC_Init(ADC0, &init);
+   ADC_InitSingle(ADC0, &initSingle);
+*/
+
   // Declare init structs
   ADC_Init_TypeDef init = ADC_INIT_DEFAULT;
   ADC_InitSingle_TypeDef initSingle = ADC_INITSINGLE_DEFAULT;
@@ -173,17 +235,22 @@ void initAdc(void)
 
   // Clear the Single FIFO
   ADC0->SINGLEFIFOCLEAR = ADC_SINGLEFIFOCLEAR_SINGLEFIFOCLEAR;
+
 }
 
 /**************************************************************************//**
  * @brief  Main function
  *****************************************************************************/
+//new features
+volatile uint32_t sample;
+volatile uint32_t millivolts;
+
 int main(void)
 {
   CHIP_Init();
 
   // Set up GPIO to trigger ADC via PRS
-  initGpio();
+  //initGpio();
   // Setup ADC to perform conversions
   initAdc();
   // Setup DMA to move ADC results to user memory
@@ -193,6 +260,22 @@ int main(void)
   while(1)
   {
     // Enter EM2 until next interrupt
-    EMU_EnterEM2(false);
+    //EMU_EnterEM2(false);
   }
+  /*
+  while(1)
+  {
+    // Start ADC conversion
+    ADC_Start(ADC0, adcStartSingle);
+
+    // Wait for conversion to be complete
+    while(!(ADC0->STATUS & _ADC_STATUS_SINGLEDV_MASK));
+
+    // Get ADC result
+    sample = ADC_DataSingleGet(ADC0);
+
+    // Calculate input voltage in mV
+    millivolts = (sample * 2500) / 4096;
+  }
+*/
 }
