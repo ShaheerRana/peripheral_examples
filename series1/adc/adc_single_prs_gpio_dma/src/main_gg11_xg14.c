@@ -67,10 +67,12 @@ volatile uint32_t counter = 0;
 void LDMA_IRQHandler(void)
 {
   // Clear interrupt flag
-  LDMA_IntClear( (1) << LDMA_CHANNEL << _LDMA_IFC_DONE_SHIFT);
+  LDMA_IntClear(LDMA_IntGet());
   counter++;
   //ldmaLoopCnt = 5;
   // Insert transfer complete functionality here
+  LDMA->SWREQ |= 1 << 0;
+
 }
 
 /**************************************************************************//**
@@ -143,17 +145,22 @@ void initLdma(void)
       adcBuffer,            // destination
       ADC_BUFFER_SIZE,      // data transfer size
       0);                   // link relative offset (links to self)
+  descr.xfer.link        = 0;                        // End of linked list
   descr.xfer.linkMode = 0;
   descr.xfer.linkAddr = 0;
   descr.xfer.decLoopCnt = true;
   descr.xfer.dstAddrMode = ldmaCtrlSrcAddrModeRel;   // Each consecutive transfer uses the previous destination
   descr.xfer.doneIfs = 1;
-  descr.xfer.structReq = 1;
+  descr.xfer.structReq = 0;
   //counter = trans.ldmaLoopCnt;
   descr.xfer.ignoreSrec = true;       // ignore single requests to reduce time spent out of EM2
 
   // Initialize LDMA transfer
   LDMA_StartTransfer(LDMA_CHANNEL, &trans, &descr);
+
+  // Send software request
+  LDMA->SWREQ |= 1 << 0;
+
 
   // Clear pending and enable interrupts for channel
   //NVIC_ClearPendingIRQ(LDMA_IRQn);
@@ -257,12 +264,11 @@ int main(void)
   initLdma();
 
   // Infinite loop
-  while(1)
+/*(  while(1)
   {
     // Enter EM2 until next interrupt
-    //EMU_EnterEM2(false);
-  }
-  /*
+    EMU_EnterEM2(false);
+  */
   while(1)
   {
     // Start ADC conversion
@@ -277,5 +283,5 @@ int main(void)
     // Calculate input voltage in mV
     millivolts = (sample * 2500) / 4096;
   }
-*/
+
 }

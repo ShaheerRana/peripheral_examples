@@ -41,6 +41,7 @@
 
 #include "em_gpio.h"
 #include "em_usart.h"
+#include "C:\Users\Co-op Shaheeer R\SimplicityStudio\SDKs\gecko_sdk\platform\emdrv\ustimer\inc\ustimer.h"
 
 
 #define adcFreq   16000000
@@ -93,23 +94,25 @@ int main(void)
 {
   CHIP_Init();
 
-  initADC();
+  //initADC();
   initUSART();
 
   // Infinite loop
   while(1)
   {
     // Start ADC conversion
-    ADC_Start(ADC0, adcStartSingle);
+    //ADC_Start(ADC0, adcStartSingle);
 
     // Wait for conversion to be complete
-    while(!(ADC0->STATUS & _ADC_STATUS_SINGLEDV_MASK));
+    //while(!(ADC0->STATUS & _ADC_STATUS_SINGLEDV_MASK));
 
     // Get ADC result
-    sample = ADC_DataSingleGet(ADC0);
-    USART_Tx(USART0, sample);
+    //sample = ADC_DataSingleGet(ADC0);
+    USART_Tx(USART0, 't');
     USART_Tx(USART0, '\n');
-    // Calculate input voltage in mV
-    millivolts = (sample * 2500) / 4096;
+
+    sl_udelay_wait(1000000);
+// Calculate input voltage in mV
+    //millivolts = (sample * 2500) / 4096;
   }
 }
