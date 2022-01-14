@@ -41,13 +41,14 @@
 
 #include "em_gpio.h"
 #include "em_usart.h"
-#include "C:\Users\Co-op Shaheeer R\SimplicityStudio\SDKs\gecko_sdk\platform\emdrv\ustimer\inc\ustimer.h"
+//#include "C:\Users\Co-op Shaheeer R\SimplicityStudio\SDKs\gecko_sdk\platform\emdrv\ustimer\inc\ustimer.h"
 
 
 #define adcFreq   16000000
 
 volatile uint32_t sample;
 volatile uint32_t millivolts;
+volatile uint8_t message = 30;
 
 /**************************************************************************//**
  * @brief  Initialize ADC function
@@ -79,12 +80,15 @@ void initADC (void)
 
 void initUSART (void)
 {
+
   USART_InitAsync_TypeDef init = USART_INITASYNC_DEFAULT;
-  CMU_ClockEnable(cmuClock_USART0, true);
-  GPIO_PinModeSet(gpioPortC, 0, gpioModePushPull, 1);
-  USART_InitAsync(USART0, &init);
-  USART0->ROUTELOC0 = USART_ROUTELOC0_RXLOC_LOC5 | USART_ROUTELOC0_TXLOC_LOC5;
-  USART0->ROUTEPEN |= USART_ROUTEPEN_TXPEN | USART_ROUTEPEN_RXPEN;
+  CMU_ClockEnable(cmuClock_USART1, true);
+  CMU_ClockEnable(cmuClock_GPIO, true);
+
+  GPIO_PinModeSet(gpioPortC, 6, gpioModePushPull, 1);
+  USART_InitAsync(USART1, &init);
+  USART1->ROUTELOC0 = USART_ROUTELOC0_RXLOC_LOC11 | USART_ROUTELOC0_TXLOC_LOC11;
+  USART1->ROUTEPEN |= USART_ROUTEPEN_TXPEN | USART_ROUTEPEN_RXPEN;
 }
 
 /**************************************************************************//**
@@ -105,13 +109,15 @@ int main(void)
 
     // Wait for conversion to be complete
     //while(!(ADC0->STATUS & _ADC_STATUS_SINGLEDV_MASK));
+    USART_Tx(USART1, message);
 
     // Get ADC result
     //sample = ADC_DataSingleGet(ADC0);
-    USART_Tx(USART0, 't');
-    USART_Tx(USART0, '\n');
-
-    sl_udelay_wait(1000000);
+    //USART_Tx(USART1, 'b');
+    //USART_Tx(USART0, '\n');
+    sample +=1;
+    USART_Tx(USART1, '\n');
+    //sl_udelay_wait(1000000);
 // Calculate input voltage in mV
     //millivolts = (sample * 2500) / 4096;
   }

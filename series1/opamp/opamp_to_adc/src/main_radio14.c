@@ -57,7 +57,8 @@ void initAdc(void)
   initSingle.diff       = 0;                   // Single ended
   initSingle.reference  = adcRef2V5;           // Internal 2.5V reference
   initSingle.resolution = adcRes12Bit;         // 12-bit resolution
-  initSingle.posSel     = adcPosSelAPORT1YCH7; // Choose input to ADC to be on PC7
+  initSingle.acqTime    = adcAcqTime4;  // set acquisition time to meet minimum requirement
+  initSingle.posSel     = adcPosSelAPORT1YCH7; // Choose input to ADC to be on P
   ADC_InitSingle(ADC0, &initSingle);
 }
 
@@ -71,8 +72,8 @@ void initOpamp(void)
   OPAMP_Init_TypeDef init = OPA_INIT_NON_INVERTING;
   init.resInMux = opaResInMuxVss;       // Set the input to the resistor ladder to VSS
   init.resSel   = RESISTOR_SELECT;      // Choose the resistor ladder ratio
-  init.posSel   = opaPosSelAPORT1XCH6;  // Choose opamp positive input to come from PC6
-  init.outMode  = opaOutModeAPORT1YCH7; // Route opamp output to PC7
+  init.posSel   = opaPosSelAPORT4XCH11;  // Choose opamp positive input to come from P
+  init.outMode  = opaOutModeAPORT1YCH7; // Route opamp output to P
 
   // Enable OPA0
   OPAMP_Enable(VDAC0, OPA0, &init);
@@ -90,8 +91,8 @@ void initOpamp(void)
  *    input it also takes care of that already.
  *
  * @note
- *    The input to the resistor ladder must be set to ground for a non-inverting
  *    opamp configuration (either by setting RESINMUX to VSS or by setting
+ *    The input to the resistor ladder must be set to ground for a non-inverting
  *    RESINMUX to NEGPAD and then connecting the negative pad (in this case
  *    OPAMP_N0) to ground.
  *****************************************************************************/
