@@ -69,14 +69,31 @@ void initAdc(void)
 void initOpamp(void)
 {
   // Configure OPA0
-  OPAMP_Init_TypeDef init = OPA_INIT_NON_INVERTING;
+ /* OPAMP_Init_TypeDef init = OPA_INIT_NON_INVERTING;
   init.resInMux = opaResInMuxVss;       // Set the input to the resistor ladder to VSS
-  init.resSel   = RESISTOR_SELECT;      // Choose the resistor ladder ratio
+  init.resSel   = VDAC_OPA_MUX_RESSEL_RES0;      // Choose the resistor ladder ratio
   init.posSel   = opaPosSelAPORT4XCH11;  // Choose opamp positive input to come from P
   init.outMode  = opaOutModeAPORT1YCH7; // Route opamp output to P
 
   // Enable OPA0
-  OPAMP_Enable(VDAC0, OPA0, &init);
+  OPAMP_Enable(VDAC0, OPA0, &init);*/
+
+  // Configure OPA0
+  OPAMP_Init_TypeDef init0 = OPA_INIT_CASCADED_INVERTING_OPA0;
+  init0.resSel   = opaResSelR2eq0_33R1;      // Choose the resistor ladder ratio
+  init0.posSel   = opaPosSelAPORT4XCH11;  // Choose opamp positive input to come from PC8
+  init0.resInMux = opaResInMuxNegPad;    // Route negative pad to resistor ladder
+
+  // Configure OPA1
+  OPAMP_Init_TypeDef init1 = OPA_INIT_CASCADED_INVERTING_OPA1;
+  init1.resSel  = opaResSelR2eq3R1;      // Choose the resistor ladder ratio
+  init1.posSel  = opaPosSelOpaIn;  // Choose opamp positive input to come from PC9
+  init1.outMode = opaOutModeAPORT1YCH7; // Route opamp output to PA1
+
+  // Enable OPA0 and OPA1
+  OPAMP_Enable(VDAC0, OPA0, &init0);
+  OPAMP_Enable(VDAC0, OPA1, &init1);
+
 }
 
 /**************************************************************************//**
