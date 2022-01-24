@@ -67,8 +67,10 @@ void initADC (void)
 
   initSingle.diff       = false;        // single ended
   initSingle.reference  = adcRef2V5;    // internal 2.5V reference
-  initSingle.resolution = adcRes12Bit;  // 12-bit resolution
-  initSingle.acqTime    = adcAcqTime4;  // set acquisition time to meet minimum requirement
+  initSingle.resolution = adcResOVS;  // 12-bit resolution _ADC_SINGLECTRL_RES_OVS, adcOvsRateSel16
+  initSingle.acqTime    = adcAcqTime16;  // set acquisition time to meet minimum requirement
+
+  init.ovsRateSel = adcOvsRateSel16;
 
   // Select ADC input. See README for corresponding EXP header pin.
   initSingle.posSel = adcPosSelAPORT4XCH11;
@@ -98,27 +100,30 @@ int main(void)
 {
   CHIP_Init();
 
-  //initADC();
+  initADC();
   initUSART();
 
   // Infinite loop
   while(1)
   {
     // Start ADC conversion
-    //ADC_Start(ADC0, adcStartSingle);
+    ADC_Start(ADC0, adcStartSingle);
 
     // Wait for conversion to be complete
-    //while(!(ADC0->STATUS & _ADC_STATUS_SINGLEDV_MASK));
-    USART_Tx(USART1, message);
+    while(!(ADC0->STATUS & _ADC_STATUS_SINGLEDV_MASK));
+    //USART_Tx(USART1, message);
 
     // Get ADC result
-    //sample = ADC_DataSingleGet(ADC0);
+    sample = ADC_DataSingleGet(ADC0);
     //USART_Tx(USART1, 'b');
     //USART_Tx(USART0, '\n');
-    sample +=1;
-    USART_Tx(USART1, '\n');
+    //sample +=1;
+    //USART_Tx(USART1, '\n');
     //sl_udelay_wait(1000000);
 // Calculate input voltage in mV
-    //millivolts = (sample * 2500) / 4096;
+    millivolts = (sample * 2500) / 4096;
+    USART_Tx(USART1, millivolts);
+    //USART_Tx(USART1, '\n');
+
   }
 }
