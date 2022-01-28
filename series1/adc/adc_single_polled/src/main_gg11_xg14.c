@@ -115,14 +115,14 @@ int main(void)
 
     // Get ADC result
     sample = ADC_DataSingleGet(ADC0);
-    //USART_Tx(USART1, 'b');
+    USART_Tx(USART1, sample);
     //USART_Tx(USART0, '\n');
     //sample +=1;
     //USART_Tx(USART1, '\n');
     //sl_udelay_wait(1000000);
 // Calculate input voltage in mV
     millivolts = (sample * 2500) / 4096;
-    USART_Tx(USART1, millivolts);
+    //USART_Tx(USART1, millivolts);
     //USART_Tx(USART1, '\n');
 
   }
