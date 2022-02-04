@@ -69,7 +69,6 @@ void initAdc(void)
 void initOpamp(void)
 {
   CMU_ClockEnable(cmuClock_VDAC0, true);
-
   /*
   // Configure OPA0 for single inverting
   OPAMP_Init_TypeDef init = OPA_INIT_INVERTING;
@@ -79,7 +78,7 @@ void initOpamp(void)
   init.resInMux = opaResInMuxNegPad;    // Route negative pad to resistor ladder
   // Enable OPA0
   OPAMP_Enable(VDAC0, OPA0, &init);
-
+  */
   // Configure OPA0 for single non-inverting
   OPAMP_Init_TypeDef init = OPA_INIT_NON_INVERTING;
   init.resInMux = opaResInMuxVss;       // Set the input to the resistor ladder to VSS
@@ -87,7 +86,8 @@ void initOpamp(void)
   init.posSel   = opaPosSelAPORT4XCH11;  // Choose opamp positive input to come from P
   init.outMode  = opaOutModeAPORT1YCH7; // Route opamp output to P
   // Enable OPA0
-  OPAMP_Enable(VDAC0, OPA0, &init1);
+  OPAMP_Enable(VDAC0, OPA0, &init);
+  /*
 
   // Configure OPA0 for cascading inverting
   OPAMP_Init_TypeDef init0 = OPA_INIT_CASCADED_INVERTING_OPA0;
@@ -104,7 +104,6 @@ void initOpamp(void)
   // Enable OPA0 and OPA1
   OPAMP_Enable(VDAC0, OPA0, &init0);
   OPAMP_Enable(VDAC0, OPA1, &init1);
-  */
 
   OPAMP_Init_TypeDef init0 = OPA_INIT_CASCADED_NON_INVERTING_OPA0;
   init0.resSel   = RESISTOR_SELECT;      // Choose the resistor ladder ratio
@@ -122,6 +121,7 @@ void initOpamp(void)
   // Enable OPA0 and OPA1
   OPAMP_Enable(VDAC0, OPA0, &init0);
   OPAMP_Enable(VDAC0, OPA1, &init1);
+  */
 
 }
 

@@ -115,7 +115,7 @@ int main(void)
 
     // Get ADC result
     sample = ADC_DataSingleGet(ADC0);
-    USART_Tx(USART1, sample);
+    //USART_Tx(USART1, sample);
     //USART_Tx(USART0, '\n');
     //sample +=1;
     //USART_Tx(USART1, '\n');
@@ -124,6 +124,13 @@ int main(void)
     millivolts = (sample * 2500) / 4096;
     //USART_Tx(USART1, millivolts);
     //USART_Tx(USART1, '\n');
+    int r = sample & 0xff;
+    int g = (sample >> 8) & 0xff;
+    int b = (sample >> 16) & 0xff;
+    int a = (sample >> 24) & 0xff;
+
+    USART_Tx(USART1, r);
+    USART_Tx(USART1, g);
 
   }
 }
